@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Blog
+from .models import Blog, User
 # Register your models here.
 class BlogAdmin(admin.ModelAdmin):
     fieldsets = [
@@ -14,3 +14,5 @@ class BlogAdmin(admin.ModelAdmin):
     search_fields = ['name']
     
 admin.site.register(Blog, BlogAdmin)
+    
+admin.site.register(User)

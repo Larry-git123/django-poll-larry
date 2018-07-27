@@ -1,7 +1,8 @@
-import re, time
+import re, time, json
 
-from django.shortcuts import render, get_object_or_404, get_list_or_404
+from django.shortcuts import render, redirect, get_object_or_404, get_list_or_404
 from django.http import HttpResponse, JsonResponse
+from django.urls import reverse
 
 from .models import User, Blog, Comment, next_id
 from .cookieutils import user2cookie, COOKIE_NAME
@@ -19,12 +20,13 @@ def text2html(text):
     
 def index(request):
     # users = get_list_or_404(User)
-    blogs = get_list_or_404(Blog)
+    blogs = get_list_or_404(Blog.objects.order_by('-created_at')[1:11])
     context = { 'blogs': blogs }
     return render(request, 'larricia/blogs.html', context)
     
 def api_get_users(request):
     users = get_list_or_404(User)
+    print('USERS:', users)
     # 隐藏密码
     for u in users:
         u.passwd = '******'
@@ -78,15 +80,20 @@ def authenticate(request, *, email, passwd):
     r.content = json.dumps(user, default=lambda obj: obj.__dict__, ensure_ascii=False).encode('utf-8')
     return r
 
-def manage_create_blog():
+def manage_create_blog(request):
     context = {
         'id': '',
         'action': 'larricia:api_create_blog'
     }
-    return render(reuqest, 'larricia/manage_blog_edit.html', context)
+    return render(request, 'larricia/manage_blog_edit.html', context)
     
 # 日志创建
-def api_create_blog(request, *, name, summary, content):
+def api_create_blog(request):
+    # request.POST针对form方式提交的内容。通过ajax提交的内容在request.body里。
+    data = json.loads(request.body)
+    name = data['name']
+    summary = data['summary']
+    content = data['content']
     # check_admin(request)
     if not name or not name.strip():
         raise FieldError('name empty')
@@ -94,9 +101,10 @@ def api_create_blog(request, *, name, summary, content):
         raise FieldError('summary empty')
     if not content or not content.strip():
         raise FieldError('content empty')
-    blog = Blog(user_id=request.__user__.id, user_name=request.__user__.name, user_image=request.__user__.image, name=name.strip(), summary=summary.strip(), content=content.strip())
+    # blog = Blog(user_id=request.__user__.id, user_name=request.__user__.name, user_image=request.__user__.image, name=name.strip(), summary=summary.strip(), content=content.strip())
+    blog = Blog(user_id='1212', user_name='dsfegregreg', user_image='about:blank', name=name.strip(), summary=summary.strip(), content=content.strip())
     blog.save()
-    return blog
+    return redirect(reverse('larricia:get_blog', args=(blog.id,)))
 
 # 日志查看
 def get_blog(request, id):
@@ -114,12 +122,17 @@ def get_blog(request, id):
 # 日志列表
 def api_blogs(request, *, pages='1'):
     page_index = get_page_index(pages)
-    num = User.objects.count()
+    num = Blog.objects.count()
     p = Page(num, page_index)
     if num == 0:
         return dict(page=p, blogs=())
-    blogs = User.objects.order_by('-created_at')[p.offset:p.offset+p.limit]
-    return JsonResponse(dict(page=p, blogs=blogs), default=lambda obj: obj.__dict__)
+    '''
+        注意，filter和order_by方法返回的是QuerySet类型，不能被序列化为JSON
+        get_list_or_404方法在内部对QuerySet调用了list()方法，因此其返回值可通过转化为__dict__序列化为JSON
+    '''
+    blogs = get_list_or_404(Blog.objects.order_by('-created_at')[p.offset:p.offset+p.limit])
+    context = {'page': p, 'blogs': blogs}
+    return JsonResponse(context, json_dumps_params={'default': lambda obj: obj.__dict__})
     
 def api_get_blog(request, *, id):
     blog = get_object_or_404(Blog, id=id)
