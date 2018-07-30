@@ -20,7 +20,7 @@ def text2html(text):
     
 def index(request):
     # users = get_list_or_404(User)
-    blogs = get_list_or_404(Blog.objects.order_by('-created_at')[1:11])
+    blogs = get_list_or_404(Blog.objects.order_by('-created_at')[0:10])
     context = { 'blogs': blogs }
     return render(request, 'larricia/blogs.html', context)
     
@@ -80,15 +80,34 @@ def authenticate(request, *, email, passwd):
     r.content = json.dumps(user, default=lambda obj: obj.__dict__, ensure_ascii=False).encode('utf-8')
     return r
 
+# 日志管理页面
+def manage_blogs(request):
+    page = request.GET.get('page', '1')
+    return render(request, 'larricia/manage_blog.html', {'page_index': get_page_index(page)})
+    
+# 转到创建新日志页面
 def manage_create_blog(request):
     context = {
         'id': '',
-        'action': 'larricia:api_create_blog'
+        'action': reverse('larricia:api_create_blog')
     }
     return render(request, 'larricia/manage_blog_edit.html', context)
     
-# 日志创建
-def api_create_blog(request):
+# 转到编辑已有日志页面
+def manage_edit_blog(request, id):
+    context = {
+        'id': id,
+        'action': reverse('larricia:api_edit_blog', args=(id,))
+    }
+    return render(request, 'larricia/manage_blog_edit.html', context)
+
+# 获取日志以编辑    
+def api_get_blog(request, id):
+    blog = get_object_or_404(Blog, id=id)
+    return JsonResponse(blog.__dict__, json_dumps_params={'default': lambda obj: obj.__dict__})
+    
+# 创建/编辑日志
+def api_edit_blog(request, **kw):
     # request.POST针对form方式提交的内容。通过ajax提交的内容在request.body里。
     data = json.loads(request.body)
     name = data['name']
@@ -101,12 +120,17 @@ def api_create_blog(request):
         raise FieldError('summary empty')
     if not content or not content.strip():
         raise FieldError('content empty')
-    # blog = Blog(user_id=request.__user__.id, user_name=request.__user__.name, user_image=request.__user__.image, name=name.strip(), summary=summary.strip(), content=content.strip())
-    blog = Blog(user_id='1212', user_name='dsfegregreg', user_image='about:blank', name=name.strip(), summary=summary.strip(), content=content.strip())
+    if len(kw) != 0:
+        # 为减少数据库查询，直接使用现有id创建新对象存入数据库
+        blog = Blog(id=kw['id'], user_id='1212', user_name='Larry Liu', user_image='about:blank', name=name.strip(), summary=summary.strip(), content=content.strip())
+    else:
+        blog = Blog(user_id='1212', user_name='Larry Liu', user_image='about:blank', name=name.strip(), summary=summary.strip(), content=content.strip())
     blog.save()
-    return redirect(reverse('larricia:get_blog', args=(blog.id,)))
+    # 构建JSON并返回
+    return JsonResponse(blog.__dict__, json_dumps_params={'default': lambda obj: obj.__dict__})
+    # return redirect(reverse('larricia:get_blog', args=(blog.id,)))
 
-# 日志查看
+# 日志阅读
 def get_blog(request, id):
     blog = get_object_or_404(Blog, id=id)
     comments = Comment.objects.filter(blog_id=id).order_by('-created_at')
@@ -120,7 +144,8 @@ def get_blog(request, id):
     return render(request, 'larricia/blog.html', context)
 
 # 日志列表
-def api_blogs(request, *, pages='1'):
+def api_blogs(request):
+    pages = request.GET.get('page', '1')
     page_index = get_page_index(pages)
     num = Blog.objects.count()
     p = Page(num, page_index)
@@ -134,10 +159,9 @@ def api_blogs(request, *, pages='1'):
     context = {'page': p, 'blogs': blogs}
     return JsonResponse(context, json_dumps_params={'default': lambda obj: obj.__dict__})
     
-def api_get_blog(request, *, id):
+# 删除日志
+def api_delete_blog(request):
+    id = json.loads(request.body)['id']
     blog = get_object_or_404(Blog, id=id)
-    return blog
-    
-# 管理页面
-def manage_blogs(request, *, page='1'):
-    return render(request, 'larricia/manage_blog.html', {'page_index': get_page_index(page)})
+    # delete()返回一个由删除元素个数和包含每种对象删除数的dict的tuple
+    return JsonResponse(blog.delete()[1])

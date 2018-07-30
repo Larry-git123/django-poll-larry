@@ -315,12 +315,14 @@ function _httpJSON(method, url, data, callback) {
         opt.contentType = 'application/json';
     }
     $.ajax(opt).done(function (r) {
+    	//alert('done');
+    	//alert(JSON.stringify(r));
         if (r && r.error) {
             return callback(r);
         }
         return callback(null, r);
     }).fail(function (jqXHR, textStatus) {
-    	alert('fail');
+    	//alert('fail');
         return callback({'error': 'http_bad_response', 'data': '' + jqXHR.status, 'message': '网络好像出问题了 (HTTP ' + jqXHR.status + ')'});
     });
 }

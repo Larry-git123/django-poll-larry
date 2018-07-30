@@ -7,7 +7,7 @@
 <script>
 var
     ID = '{{ id }}',
-    action = '{{ url(action) }}';
+    action = '{{ action }}';
 function initVM(blog) {
     var vm = new Vue({
         el: '#vm',
@@ -21,7 +21,7 @@ function initVM(blog) {
                         $form.showFormError(err);
                     }
                     else {
-                        return location.assign("{{ url('larricia:api_create_blog') }}" + r.id);
+                    	return location.assign("{{ url('larricia:get_blog') }}" + r.id);
                     }
                 });
             }
@@ -31,7 +31,7 @@ function initVM(blog) {
 }
 $(function () {
     if (ID) {
-        getJSON("{{ url('larricia:api_create_blog') }}" + ID, function (err, blog) {
+        getJSON("{{ url('larricia:api_get_blog') }}" + ID, function (err, blog) {
             if (err) {
                 return fatal(err);
             }

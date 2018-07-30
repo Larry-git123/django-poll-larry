@@ -14,11 +14,11 @@ function initVM(data) {
         },
         methods: {
             edit_blog: function (blog) {
-                location.assign('larricia/manage/blogs/edit?id=' + blog.id);
+                location.assign("{{ url('larricia:manage_edit_blog') }}" + blog.id);
             },
             delete_blog: function (blog) {
                 if (confirm('确认要删除“' + blog.name + '”？删除后不可恢复！')) {
-                    postJSON('larricia/api/blogs/' + blog.id + '/delete', function (err, r) {
+                    postJSON("{{ url('larricia:api_delete_blog') }}", { id: blog.id }, function (err, r) {
                         if (err) {
                             return alert(err.message || err.error || err);
                         }
