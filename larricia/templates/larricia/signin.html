@@ -28,9 +28,9 @@ $(function() {
                         email: email,
                         passwd: this.passwd==='' ? '' : CryptoJS.SHA1(email + ':' + this.passwd).toString()
                     };
-                $form.postJSON('/api/authenticate', data, function(err, result) {
+                $form.postJSON("{{ url('larricia:authenticate') }}", data, function(err, result) {
                     if (! err) {
-                        location.assign('/');
+                        location.assign("{{ url('larricia:index') }}");
                     }
                 });
             }

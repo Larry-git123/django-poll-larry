@@ -9,8 +9,13 @@ urlpatterns = [
     # 获取用户列表
     path('api/users/', views.api_get_users, name='api_get_users'),
     # 注册
+    path('register/', views.manage_register, name='register'),
     path('api/newuser/', views.api_register_user, name='api_register_user'),
-    path('api/authenticate/', views.authenticate, name='authenticate'),
+    # 登录
+    path('signin/', views.manage_signin, name='signin'),
+    path('api/authenticate/', views.api_signin_user, name='authenticate'),
+    # 登出
+    path('api/signout/', views.api_signout_user, name='api_signout_user'),
     # 创建日志
     path('manage/blogs/create/', views.manage_create_blog, name='manage_create_blog'),
     path('api/newblog/', views.api_edit_blog, name='api_create_blog'),

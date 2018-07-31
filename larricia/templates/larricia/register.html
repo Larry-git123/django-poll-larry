@@ -35,7 +35,7 @@ $(function () {
                     return $form.showFormError('两次输入的口令不一致');
                 }
                 var email = this.email.trim().toLowerCase();
-                $form.postJSON("{{ url('larricia:api_newuser') }}", {
+                $form.postJSON("{{ url('larricia:api_register_user') }}", {
                     name: this.name.trim(),
                     email: email,
                     passwd: CryptoJS.SHA1(email + ':' + this.password1).toString()
@@ -43,7 +43,7 @@ $(function () {
                     if (err) {
                         return $form.showFormError(err);
                     }
-                    return location.assign('/');
+                    return location.assign("{{ url('larricia:index') }}");
                 });
             }
         }

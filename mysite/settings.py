@@ -135,3 +135,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
 STATIC_URL = '/static/'
+
+# Authentication Backend
+# https://docs.djangoproject.com/en/2.0/topics/auth/customizing/#specifying-authentication-backends
+AUTHENTICATION_BACKENDS = ['django.contrib.auth.backends.ModelBackend', 'larricia.backend.EmailBackend']

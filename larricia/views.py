@@ -1,5 +1,7 @@
 import re, time, json
 
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect, get_object_or_404, get_list_or_404
 from django.http import HttpResponse, JsonResponse
 from django.urls import reverse
@@ -17,11 +19,14 @@ _RE_SHA1 = re.compile(r'^[0-9a-f]{40}$')
 def text2html(text):
     lines = map(lambda s: '<p>%s</p>' % s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;'), filter(lambda s: s.strip() != '', text.split('\n')))
     return ''.join(lines)
-    
+
+# 返回JSON错误信息
+def jsonfail(message):
+    return JsonResponse({ 'error': 'http_bad_response', 'data': '500', 'message': message })
+
 def index(request):
-    # users = get_list_or_404(User)
     blogs = get_list_or_404(Blog.objects.order_by('-created_at')[0:10])
-    context = { 'blogs': blogs }
+    context = { 'blogs': blogs, 'user': request.user }
     return render(request, 'larricia/blogs.html', context)
     
 def api_get_users(request):
@@ -32,58 +37,68 @@ def api_get_users(request):
         u.passwd = '******'
     context = { 'users': users }
     return JsonResponse(context, json_dumps_params={'default': lambda obj: obj.__dict__})
+
+def manage_register(request):
+    return render(request, 'larricia/register.html')
     
 # 用户注册
-def api_register_user(request, *, email, name, passwd):
+def api_register_user(request):
+    data = json.loads(request.body)
+    name = data['name']
+    email = data['email']
+    passwd = data['passwd']
+    print('PASSWD:', passwd)
     if not name or not name.strip():
-        raise FieldError('name')
+        return jsonfail('请输入用户名test')
     if not email or not _RE_EMAIL.match(email):
-        raise ValidationError('email')
+        return JsonResponse({ 'error': 'http_bad_response', 'data': '500', 'message': '电子邮件格式不正确' })
     if not passwd or not _RE_SHA1.match(passwd):
-        raise ValidationError('passwd')
-    users = get_list_or_404(User, email=email)
-    if len(users) > 0:
-        raise ValidationError('Email is already in use.')
+        return JsonResponse({ 'error': 'http_bad_response', 'data': '500', 'message': '密码格式不正确' })
+    # 这里不能用get_list_or_404，因为该函数在查询到的列表为空时会直接抛出Http404异常，从而无法根据列表是否为空作进一步判断
+    # 应该调用Foo.objects.filter方法返回QuerySet，然后用len判断
+    if len(User.objects.filter(email=email)) > 0:
+        return jsonfail('电子邮件已被使用')
     uid = next_id()
     sha1_passwd = '%s:%s' % (uid, passwd)
-    user = User(id=uid, name=name.strip(), email=email, passwd=hashlib.sha1(sha1_passwd.encode('utf-8')).hexdigest(), image='http://www.gravatar.com/avatar/%s?d=mm&s=120' % hashlib.md5(email.encode('utf-8')).hexdigest())
-    user.save()
-    r = HttpResponse()
-    r.set_cookie(COOKIE_NAME, user2cookie(user, 86400), max_age=86400, httponly=True)
-    user.passwd = '******'
-    r.content_type = 'application/json'
-    r.content = json.dumps(user, default=lambda obj: obj.__dict__, ensure_ascii=False).encode('utf-8')
-    return r
+    # 创建用户并保存
+    user = User.objects.create_user(name, email, passwd)
+    # 自动登录
+    login(request, user, backend='larricia.backend.EmailBackend')
+    return JsonResponse({ 'username': name, 'email': email })
+
+def manage_signin(request):
+    return render(request, 'larricia/signin.html')
     
 # 用户登录
-def authenticate(request, *, email, passwd):
+def api_signin_user(request):
+    data = json.loads(request.body)
+    email = data['email']
+    passwd = data['passwd']
     if not email or not _RE_EMAIL.match(email):
-        raise ValidationError('email')
+        return JsonResponse({ 'error': 'http_bad_response', 'data': '500', 'message': '电子邮件格式不正确' })
     if not passwd or not _RE_SHA1.match(passwd):
-        raise ValidationError('passwd')
-    users = get_list_or_404(User, email=email)
-    if len(users) == 0:
-        raise ValidationError('Email not exist.')
-    user = user[0]
-    # 检查密码
-    sha1 = hashlib.sha1()
-    sha1.update(user.id.encode('utf-8'))
-    sha1.update(b':')
-    sha1.update(passwd.encode('utf-8'))
-    if passwd != sha1.hexdigest():
-        raise ValidationError('Invalid Password.')
-    # 认证成功，创建Cookie
-    r = HttpResponse()
-    r.set_cookie(COOKIE_NAME, user2cookie(user, 86400), max_age=86400, httponly=True)
-    user.passwd = '******'
-    r.content_type = 'application/json'
-    r.content = json.dumps(user, default=lambda obj: obj.__dict__, ensure_ascii=False).encode('utf-8')
-    return r
+        return JsonResponse({ 'error': 'http_bad_response', 'data': '500', 'message': '密码不正确' })
+    # 进行用户认证
+    user = authenticate(email=email, password=passwd)
+    if user is not None and user.is_active:
+    # 认证成功，登录用户
+        login(request, user)
+        context = { 'email': email }
+    else:
+    # 认证失败
+        context = { 'error': 'http_bad_response', 'data': '500', 'message': '登录失败，请确认电子邮件和密码' }
+    return JsonResponse(context)
 
+# 用户登出
+def api_signout_user(request):
+    logout(request)
+    return index(request)
+    
 # 日志管理页面
 def manage_blogs(request):
     page = request.GET.get('page', '1')
-    return render(request, 'larricia/manage_blog.html', {'page_index': get_page_index(page)})
+    context = {'page_index': get_page_index(page), 'user': request.user }
+    return render(request, 'larricia/manage_blog.html', context)
     
 # 转到创建新日志页面
 def manage_create_blog(request):
@@ -120,11 +135,12 @@ def api_edit_blog(request, **kw):
         raise FieldError('summary empty')
     if not content or not content.strip():
         raise FieldError('content empty')
+    user = request.user
     if len(kw) != 0:
         # 为减少数据库查询，直接使用现有id创建新对象存入数据库
-        blog = Blog(id=kw['id'], user_id='1212', user_name='Larry Liu', user_image='about:blank', name=name.strip(), summary=summary.strip(), content=content.strip())
+        blog = Blog(id=kw['id'], user_id=user.id, user_name=user.username, user_image='http://www.gravatar.com/avatar/%s?d=mm&s=120', name=name.strip(), summary=summary.strip(), content=content.strip())
     else:
-        blog = Blog(user_id='1212', user_name='Larry Liu', user_image='about:blank', name=name.strip(), summary=summary.strip(), content=content.strip())
+        blog = Blog(user_id=user.id, user_name=user.username, user_image='http://www.gravatar.com/avatar/%s?d=mm&s=120', name=name.strip(), summary=summary.strip(), content=content.strip())
     blog.save()
     # 构建JSON并返回
     return JsonResponse(blog.__dict__, json_dumps_params={'default': lambda obj: obj.__dict__})

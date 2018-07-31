@@ -65,7 +65,11 @@ $(function() {
     </div>
 
     <div id="vm" class="uk-width-1-1">
-        <a href="{{ url('larricia:manage_create_blog') }}" class="uk-button uk-button-primary"><i class="uk-icon-plus"></i> 新日志</a>
+    	{% if user.id %}
+            {% if user.is_superuser %}
+        		<a href="{{ url('larricia:manage_create_blog') }}" class="uk-button uk-button-primary"><i class="uk-icon-plus"></i> 新日志</a>
+            {% endif %}
+        {% endif %}
 
         <table class="uk-table uk-table-hover">
             <thead>
@@ -73,7 +77,11 @@ $(function() {
                     <th class="uk-width-5-10">标题 / 摘要</th>
                     <th class="uk-width-2-10">作者</th>
                     <th class="uk-width-2-10">创建时间</th>
-                    <th class="uk-width-1-10">操作</th>
+                    {% if user.id %}
+                    	{% if user.is_superuser %}
+                    		<th class="uk-width-1-10">操作</th>
+                    	{% endif %}
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -87,10 +95,14 @@ $(function() {
                     <td>
                         <span v-text="blog.created_at.toDateTime()"></span>
                     </td>
-                    <td>
-                        <a href="#0" v-on="click: edit_blog(blog)"><i class="uk-icon-edit"></i>
-                        <a href="#0" v-on="click: delete_blog(blog)"><i class="uk-icon-trash-o"></i>
-                    </td>
+                    {% if user.id %}
+                    	{% if user.is_superuser %}
+                    		<td>
+                        		<a href="#0" v-on="click: edit_blog(blog)"><i class="uk-icon-edit"></i>
+                        		<a href="#0" v-on="click: delete_blog(blog)"><i class="uk-icon-trash-o"></i>
+                    		</td>
+                        {% endif %}
+                    {% endif %}
                 </tr>
             </tbody>
         </table>
