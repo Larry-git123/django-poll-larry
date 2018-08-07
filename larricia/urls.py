@@ -32,4 +32,6 @@ urlpatterns = [
     # 删除日志
     path('api/deleteblog/', views.api_delete_blog, name='api_delete_blog'),
     path('manage/blogs/', views.manage_blogs, name='manage_blogs'),
+    # 发表评论
+    path('api/comment/post/<str:id>/', views.api_post_comment, name='api_post_comment'),
 ]

@@ -6,7 +6,7 @@ from django.shortcuts import render, redirect, get_object_or_404, get_list_or_40
 from django.http import HttpResponse, JsonResponse
 from django.urls import reverse
 
-from .models import User, Blog, Comment, next_id
+from .models import Blog, Comment, next_id
 from .cookieutils import user2cookie, COOKIE_NAME
 from .page import Page, get_page_index
 
@@ -19,7 +19,7 @@ _RE_SHA1 = re.compile(r'^[0-9a-f]{40}$')
 def text2html(text):
     lines = map(lambda s: '<p>%s</p>' % s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;'), filter(lambda s: s.strip() != '', text.split('\n')))
     return ''.join(lines)
-
+    
 # 返回JSON错误信息
 def jsonfail(message):
     return JsonResponse({ 'error': 'http_bad_response', 'data': '500', 'message': message })
@@ -181,3 +181,13 @@ def api_delete_blog(request):
     blog = get_object_or_404(Blog, id=id)
     # delete()返回一个由删除元素个数和包含每种对象删除数的dict的tuple
     return JsonResponse(blog.delete()[1])
+    
+# 发表评论
+def api_post_comment(request, id):
+    # 获取当前用户信息
+    user = request.user
+    # 获取评论内容
+    content = json.loads(request.body).get('content', '')
+    comment = Comment(blog_id=id, user_id=user.id, user_name=user.username, content=content)
+    comment.save()
+    return JsonResponse({'comment_id': comment.id })

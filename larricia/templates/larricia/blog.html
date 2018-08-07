@@ -5,7 +5,7 @@
 {% block beforehead %}
 
 <script>
-var comment_url = '/api/blogs/{{ blog.id }}/comments';
+var comment_url = "{{ url('larricia:api_post_comment', args=(blog.id,)) }}";
 $(function () {
     var $form = $('#form-comment');
     $form.submit(function (e) {
@@ -38,13 +38,13 @@ $(function () {
 
         <hr class="uk-article-divider">
 
-    {% if __user__ %}
+    {% if user.id %}
         <h3>发表评论</h3>
 
         <article class="uk-comment">
             <header class="uk-comment-header">
-                <img class="uk-comment-avatar uk-border-circle" width="50" height="50" src="{{ __user__.image }}">
-                <h4 class="uk-comment-title">{{ __user__.name }}</h4>
+                <img class="uk-comment-avatar uk-border-circle" width="50" height="50" src="{{ user.image }}">
+                <h4 class="uk-comment-title">{{ user.username }}</h4>
             </header>
             <div class="uk-comment-body">
                 <form id="form-comment" class="uk-form">
@@ -95,9 +95,9 @@ $(function () {
         <div class="uk-panel uk-panel-header">
             <h3 class="uk-panel-title">友情链接</h3>
             <ul class="uk-list uk-list-line">
-                <li><i class="uk-icon-link"></i> <a href="#">编程</a></li>
-                <li><i class="uk-icon-link"></i> <a href="#">思考</a></li>
-                <li><i class="uk-icon-link"></i> <a href="#">读书</a></li>
+                <li><i class="uk-icon-link"></i> <a href="https://www.iplaysoft.com/" target="_blank">异次元软件世界</a></li>
+                <li><i class="uk-icon-link"></i> <a href="http://www.pixcn.cn/portal.php" target="_blank">Pixel中文网</a></li>
+                <li><i class="uk-icon-link"></i> <a href="https://cn.engadget.com/" target="_blank">Engadget</a></li>
             </ul>
         </div>
     </div>
